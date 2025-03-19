@@ -13,7 +13,7 @@ local function returnFunc()
 	return returnV
 end
 
---those functions were meant to error so please do not call them
+--these functions were meant to error so please do not call them
 local function index(table:any,index:string) : any return table[index] end
 local function newIndex(table:any,index:string,value:any) : () table[index] = value end
 
