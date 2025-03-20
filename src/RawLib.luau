@@ -31,14 +31,16 @@ type RawLib = {
 	cframe_mul:(table:CFrame,value:CFrame|Vector3) -> CFrame|Vector3;
 	cframe_add:(table:CFrame,value:Vector3) -> CFrame;
 	cframe_sub:(table:CFrame,value:Vector3) -> CFrame;
-	
+
+	--[[
 	vector3_index:(table:Vector3,index:keyof<Vector3>) -> any;
 	vector3_add:(table:Vector3,value:Vector3) -> Vector3;
 	vector3_sub:(table:Vector3,value:Vector3) -> Vector3;
 	vector3_mul:(table:Vector3,value:Vector3|number) -> Vector3;
 	vector3_div:(table:Vector3,value:Vector3|number) -> Vector3;
 	vector3_fdiv:(table:Vector3,value:Vector3|number) -> Vector3;
-	
+	]]
+
 	vector2_index:(table:Vector2,index:keyof<Vector2>) -> any;
 	vector2_add:(table:Vector2,value:Vector2) -> Vector2;
 	vector2_sub:(table:Vector2,value:Vector2) -> Vector2;
@@ -66,14 +68,16 @@ local RawLib:RawLib = {
 	cframe_add = select(2,xpcall(add,returnFunc,CFrame.identity,nil)) or warn("CFrame add raw call is not available") and add::any;
 	cframe_sub = select(2,xpcall(sub,returnFunc,CFrame.identity,nil)) or warn("CFrame sub raw call is not available") and sub::any;
 	cframe_mul = select(2,xpcall(mul,returnFunc,CFrame.identity,nil)) or warn("CFrame mul raw call is not available") and mul::any;
-	
+
+	--[[
 	vector3_index = select(2,xpcall(index,returnFunc,Vector3.zero,"")) or warn("Vector3 index raw call is not available") and index::any;
 	vector3_add = select(2,xpcall(add,returnFunc,Vector3.zero,nil)) or warn("Vector3 add raw call is not available") and add::any;
 	vector3_div = select(2,xpcall(div,returnFunc,Vector3.zero,nil)) or warn("Vector3 div raw call is not available") and div::any;
 	vector3_mul = select(2,xpcall(mul,returnFunc,Vector3.zero,nil)) or warn("Vector3 mul raw call is not available") and mul::any;
 	vector3_sub = select(2,xpcall(sub,returnFunc,Vector3.zero,nil)) or warn("Vector3 sub raw call is not available") and sub::any;
 	vector3_fdiv = select(2,xpcall(fdiv,returnFunc,Vector3.zero,nil)) or warn("Vector3 fdiv raw call is not available") and fdiv::any;
-	
+	]]
+
 	vector2_index = select(2,xpcall(index,returnFunc,Vector2.zero,"")) or warn("Vector2 index raw call is not available") and index::any;
 	vector2_add = select(2,xpcall(add,returnFunc,Vector2.zero,nil)) or warn("Vector2 add raw call is not available") and add::any;
 	vector2_div = select(2,xpcall(div,returnFunc,Vector2.zero,nil)) or warn("Vector2 div raw call is not available") and div::any;
