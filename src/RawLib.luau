@@ -67,7 +67,9 @@ local function __idivFetch<T>(item: T): <Key>(T, Key & keyof<T>, index<T, Key>) 
 	end)
 end
 
-local RawLib = {}
+local RawLib = {
+	fetch = fetch
+}
 
 --stylua: ignore start
 RawLib.instance_index = __indexFetch(workspace) :: (table: Instance, index: keyof<Instance> | string) -> any
