@@ -1,99 +1,101 @@
---!optimize 2
---!strict 
---This module will pobably be patched
+--!nocheck
 
---this function returns the metamethod and also tries to predict if it was patched
-local function returnFunc()
-	local returnV = debug.info(2,"f")
-	
-	if returnV == error then
-		return nil
-	end
-	
-	return returnV
+local xpcall = xpcall
+local debug_info = debug.info
+local select = select
+
+-- has a fallback under the unlikely scenario this behavior stops working
+local function fetch<T>(call: () -> (), fallback: T): T
+	local output = select(
+		2,
+		xpcall(call, function()
+			return debug_info(2, "f")
+		end)
+	)
+	return ((typeof(output) == "function") and output)
+		or warn(debug.traceback(`raw call is not available`))
+		or fallback
 end
 
---these functions were meant to error so please do not call them
-local function index(table:any,index:string) : any return table[index] end
-local function newIndex(table:any,index:string,value:any) : () table[index] = value end
+local function __indexFetch<T>(item: T)
+	return fetch(function()
+		return item[nil]
+	end, function<T, Idx>(tbl: T, idx: Idx): index<T, Idx>
+		return tbl[idx]
+	end)
+end
+local function __newindexFetch<T>(item: T)
+	return fetch(function()
+		item[""] = nil
+	end, function<T, Idx>(tbl: T, idx: Idx, value: index<T, Idx>)
+		tbl[idx] = value
+	end)
+end
+local function __addFetch<T>(item: T): <Key>(T, Key & keyof<T>, index<T, Key>) -> ()
+	return fetch(function()
+		return item + nil
+	end, function<Left, Right>(left: Left, right: Right)
+		return left + right
+	end)
+end
+local function __subFetch<T>(item: T): <Key>(T, Key & keyof<T>, index<T, Key>) -> ()
+	return fetch(function()
+		return item - nil
+	end, function<Left, Right>(left: Left, right: Right)
+		return left - right
+	end)
+end
+local function __mulFetch<T>(item: T): <Key>(T, Key & keyof<T>, index<T, Key>) -> ()
+	return fetch(function()
+		return item * nil
+	end, function<Left, Right>(left: Left, right: Right)
+		return left * right
+	end)
+end
+local function __divFetch<T>(item: T): <Key>(T, Key & keyof<T>, index<T, Key>) -> ()
+	return fetch(function()
+		return item / nil
+	end, function<Left, Right>(left: Left, right: Right)
+		return left / right
+	end)
+end
+local function __idivFetch<T>(item: T): <Key>(T, Key & keyof<T>, index<T, Key>) -> ()
+	return fetch(function()
+		return item // nil
+	end, function<Left, Right>(left: Left, right: Right)
+		return left // right
+	end)
+end
 
-local function mul(table:any,value:number) : any return table*value end
-local function add(table:any,value:number) : any return table+value end
-local function sub(table:any,value:number) : any return table-value end
-local function div(table:any,value:number) : any return table/value end
-local function fdiv(table:any,value:number) : any return table//value end
+local RawLib = {}
 
-type RawLib = {
-	instance_index:(table:Instance,index:keyof<Instance>|string) -> any;
-	instance_newindex:(table:Instance,index:keyof<Instance>|string,value:any) -> ();
-	
-	cframe_index:(table:CFrame,index:keyof<CFrame>) -> any;
-	cframe_mul:(table:CFrame,value:CFrame|Vector3) -> CFrame|Vector3;
-	cframe_add:(table:CFrame,value:Vector3) -> CFrame;
-	cframe_sub:(table:CFrame,value:Vector3) -> CFrame;
+--stylua: ignore start
+RawLib.instance_index = __indexFetch(workspace) :: (table: Instance, index: keyof<Instance> | string) -> any
+RawLib.instance_newindex = __newindexFetch(workspace) :: (table: Instance, index: keyof<Instance> | string, value: any) -> ()
 
-	--[[
-	vector3_index:(table:Vector3,index:keyof<Vector3>) -> any;
-	vector3_add:(table:Vector3,value:Vector3) -> Vector3;
-	vector3_sub:(table:Vector3,value:Vector3) -> Vector3;
-	vector3_mul:(table:Vector3,value:Vector3|number) -> Vector3;
-	vector3_div:(table:Vector3,value:Vector3|number) -> Vector3;
-	vector3_fdiv:(table:Vector3,value:Vector3|number) -> Vector3;
-	]]
+RawLib.cframe_index = __indexFetch(CFrame.identity) :: (table: CFrame, index: keyof<CFrame>) -> any
+RawLib.cframe_mul   = __mulFetch(CFrame.identity) :: (table: CFrame, value: CFrame | Vector3) -> CFrame | Vector3
+RawLib.cframe_add   = __addFetch(CFrame.identity) :: (table: CFrame, value: Vector3) -> CFrame
+RawLib.cframe_sub   = __subFetch(CFrame.identity) :: (table: CFrame, value: Vector3) -> CFrame
 
-	vector2_index:(table:Vector2,index:keyof<Vector2>) -> any;
-	vector2_add:(table:Vector2,value:Vector2) -> Vector2;
-	vector2_sub:(table:Vector2,value:Vector2) -> Vector2;
-	vector2_mul:(table:Vector2,value:Vector2|number) -> Vector2;
-	vector2_div:(table:Vector2,value:Vector2|number) -> Vector2;
-	
-	udim_index:(table:UDim,index:keyof<UDim>) -> any;
-	udim_add:(table:UDim,value:UDim) -> UDim;
-	udim_sub:(table:UDim,value:UDim) -> UDim;
-	
-	udim2_index:(table:UDim2,index:keyof<UDim2>) -> any;
-	udim2_add:(table:UDim2,value:UDim2) -> UDim2;
-	udim2_sub:(table:UDim2,value:UDim2) -> UDim2;
-	
-	rect_index:(table:Rect,index:keyof<Rect>) -> any;
-	color_index:(table:Color3,keyof<Color3>) -> any;
-}
+RawLib.vector2_index = __indexFetch(Vector2.zero) :: (table: Vector2, index: keyof<Vector2>) -> any
+RawLib.vector2_add   = __addFetch(Vector2.zero) :: (table: Vector2, value: Vector2) -> Vector2
+RawLib.vector2_sub   = __subFetch(Vector2.zero) :: (table: Vector2, value: Vector2) -> Vector2
+RawLib.vector2_mul   = __mulFetch(Vector2.zero) :: (table: Vector2, value: Vector2 | number) -> Vector2
+RawLib.vector2_div   = __divFetch(Vector2.zero) :: (table: Vector2, value: Vector2 | number) -> Vector2
+RawLib.vector2_idiv  = __idivFetch(Vector2.zero) :: (table: Vector2, value: Vector2 | number) -> Vector2
 
---There is a better method to organize all of them... Too bad!
-local RawLib:RawLib = {
-	instance_index = select(2,xpcall(index,returnFunc,game,"")) or warn("Instance index raw call is not available") and index::any;
-	instance_newindex = select(2,xpcall(newIndex,returnFunc,game,"",nil)) or warn("Instance newIndex raw call is not available") and newIndex::any;
-	
-	cframe_index = select(2,xpcall(index,returnFunc,CFrame.identity,"")) or warn("CFrame index raw call is not available") and index::any;
-	cframe_add = select(2,xpcall(add,returnFunc,CFrame.identity,nil)) or warn("CFrame add raw call is not available") and add::any;
-	cframe_sub = select(2,xpcall(sub,returnFunc,CFrame.identity,nil)) or warn("CFrame sub raw call is not available") and sub::any;
-	cframe_mul = select(2,xpcall(mul,returnFunc,CFrame.identity,nil)) or warn("CFrame mul raw call is not available") and mul::any;
+RawLib.udim_index = __indexFetch(UDim.new(0, 0)) :: (table: UDim, index: keyof<UDim>) -> any
+RawLib.udim_add   = __addFetch(UDim.new(0, 0)) :: (table: UDim, value: UDim) -> UDim
+RawLib.udim_sub   = __subFetch(UDim.new(0, 0)) :: (table: UDim, value: UDim) -> UDim
 
-	--[[
-	vector3_index = select(2,xpcall(index,returnFunc,Vector3.zero,"")) or warn("Vector3 index raw call is not available") and index::any;
-	vector3_add = select(2,xpcall(add,returnFunc,Vector3.zero,nil)) or warn("Vector3 add raw call is not available") and add::any;
-	vector3_div = select(2,xpcall(div,returnFunc,Vector3.zero,nil)) or warn("Vector3 div raw call is not available") and div::any;
-	vector3_mul = select(2,xpcall(mul,returnFunc,Vector3.zero,nil)) or warn("Vector3 mul raw call is not available") and mul::any;
-	vector3_sub = select(2,xpcall(sub,returnFunc,Vector3.zero,nil)) or warn("Vector3 sub raw call is not available") and sub::any;
-	vector3_fdiv = select(2,xpcall(fdiv,returnFunc,Vector3.zero,nil)) or warn("Vector3 fdiv raw call is not available") and fdiv::any;
-	]]
+RawLib.udim2_index = __indexFetch(UDim2.new(0, 0)) :: (table: UDim2, index: keyof<UDim2>) -> any
+RawLib.udim2_add   = __addFetch(UDim2.new(0, 0)) :: (table: UDim2, value: UDim2) -> UDim2
+RawLib.udim2_sub   = __subFetch(UDim2.new(0, 0)) :: (table: UDim2, value: UDim2) -> UDim2
 
-	vector2_index = select(2,xpcall(index,returnFunc,Vector2.zero,"")) or warn("Vector2 index raw call is not available") and index::any;
-	vector2_add = select(2,xpcall(add,returnFunc,Vector2.zero,nil)) or warn("Vector2 add raw call is not available") and add::any;
-	vector2_div = select(2,xpcall(div,returnFunc,Vector2.zero,nil)) or warn("Vector2 div raw call is not available") and div::any;
-	vector2_mul = select(2,xpcall(mul,returnFunc,Vector2.zero,nil)) or warn("Vector2 mul raw call is not available") and mul::any;
-	vector2_sub = select(2,xpcall(sub,returnFunc,Vector2.zero,nil)) or warn("Vector2 sub raw call is not available") and sub::any;
-	
-	udim_index = select(2,xpcall(index,returnFunc,UDim.new(),"")) or warn("UDim index raw call is not available") and index::any;
-	udim_sub = select(2,xpcall(sub,returnFunc,UDim.new(),"")) or warn("UDim sub raw call is not available") and sub::any;
-	udim_add = select(2,xpcall(add,returnFunc,UDim.new(),"")) or warn("UDim add raw call is not available") and add::any;
-	
-	udim2_index = select(2,xpcall(index,returnFunc,UDim2.new(),"")) or warn("UDim2 index raw call is not available") and index::any;
-	udim2_sub = select(2,xpcall(sub,returnFunc,UDim2.new(),"")) or warn("UDim2 sub raw call is not available") and sub::any;
-	udim2_add = select(2,xpcall(add,returnFunc,UDim2.new(),"")) or warn("UDim2 add raw call is not available") and add::any;
-	
-	rect_index = select(2,xpcall(index,returnFunc,Rect.new(),"")) or warn("Instance index raw call is not available") and index::any;
-	color_index = select(2,xpcall(index,returnFunc,Color3.new(),"")) or warn("Instance index raw call is not available") and index::any;
-}
+RawLib.rect_index = __indexFetch(Rect.new()) :: (table: Rect, index: keyof<Rect>) -> any
+
+RawLib.color_index = __indexFetch(Color3.new()) :: (table: Color3, keyof<Color3>) -> any
+--stylua: ignore end
 
 return RawLib
