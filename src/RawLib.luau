@@ -1,4 +1,5 @@
 --!nocheck
+--!optimize 2
 
 local xpcall = xpcall
 local debug_info = debug.info
